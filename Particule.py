@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 class Particule(object):
     
-    def __init__(self, pos0 = Vecteur3D(), vit0=Vecteur3D(), mass = 0, name = 'p1', color = 'blue', fix=False):
+    def __init__(self, pos0 = Vecteur3D(), vit0=Vecteur3D(), mass = 0, name = 'p1', color = 'blue', fix=False, glissiere=Vecteur3D()):
         """attribute 'fix' can be used to not adhere to the PFD"""
         self.position = [pos0]
         self.velocity=[vit0]
@@ -31,6 +31,7 @@ class Particule(object):
         self.name = name
         self.color = color
         self.fix = fix
+        self.glissiere=glissiere
 
     def getPosition(self):
         """returns current position"""
@@ -162,14 +163,17 @@ class Univers(object) :
         for part in self.population:
             totalForce = Vecteur3D()
             for f in self.listForce:
-                totalForce += f.apply(part)
-            if part.fix==False:    
-                part.setForce(totalForce)
-                part.getAcc()
-                part.move(self.step)
-            else:
-                
-                part.move(self.step)
+                if not(part.glissiere==Vecteur3D()) :
+                    totalForce +=(f.apply(part) ** part.glissiere.norm() )** part.glissiere.norm()
+                elif part.fix:    
+                    totalForce = Vecteur3D()
+                    
+                else :
+                    totalForce += f.apply(part)
+                                   
+            part.setForce(totalForce)
+            part.getAcc()
+            part.move(self.step)
             
         self.temps.append(self.temps[-1]+self.step)
     
@@ -252,7 +256,10 @@ class ForceConst(object):
         self.particles = particles
            
     def apply(self, p):
-        return self.value
+        if p in self.particles:
+            return self.value
+        else:
+            return Vecteur3D()
     
 class ForceHarmonic(object):
     def __init__(self, value=Vecteur3D(), pulsation =0, *particles):
@@ -310,11 +317,11 @@ class Rod(object):
     def __init__(self, particle1=None, particle2=None):
         self.particle1 = particle1
         self.particle2 = particle2
-        self.stiffness = 0
-        self.dumping = 0
-    
+        self.stiffness = 1000
+        self.dumping = 1
+        self.l0 =( particle1.getPosition() - particle2.getPosition() ).mod()
     def apply(self,p):
-        return dampingSpring(self.stiffness, self.dumping, 0, self.particle1, self.particle2).apply(p)
+        return dampingSpring(self.stiffness, self.dumping, self.l0, self.particle1, self.particle2).apply(p)
     
 
 class PrismJoint(object):
