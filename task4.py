@@ -35,17 +35,24 @@ def main():
     num_particles = 10
 
     # Creating particles
-    p1 = Particule(pos0=Vecteur3D(4,4,0), vit0 = Vecteur3D(0,0,0), mass = 1, name = 'ball 1', color = 'green', fix=True)
-    p2 =  Particule(pos0=Vecteur3D(6,3,0), vit0 = Vecteur3D(0,0,0), mass = 1, name = 'ball 2', color= 'blue')
+    p1 = Particule(pos0=Vecteur3D(4,4,0), vit0 = Vecteur3D(0,0,0), mass = 1, name = 'ball 1', color = 'green', glissiere=Vecteur3D(1,0,0))
+    p2 =  Particule(pos0=Vecteur3D(3,2,0), vit0 = Vecteur3D(0,0,0), mass = 1, name = 'ball 2', color= 'blue')
     plage.addAgent(p1)
     plage.addAgent(p2)
+    
+    
 
     l0 =( p1.getPosition() - p2.getPosition() ).mod()
-    #ressort = dampingSpring(p1,p2, k = 1, c = 0, l0 = l0)
-    #plage.addSource(ressort)
+    ressort = dampingSpring(p1,p2, k = 100, c = 1, l0 = l0)
+    plage.addSource(ressort)
 
-    rod = Rod(p1,p2)
-    plage.addSource(rod)
+    plage.addSource(Viscosity(0.05))
+    
+    fconst = ForceConst(Vecteur3D(0,0,0), p1)
+    plage.addSource(fconst)
+    
+    #rod = Rod(p1,p2)
+    #plage.addSource(rod)
 
     # Adding gravity
     plage.addSource(Gravity(Vecteur3D(0, 9.8,0)))
@@ -65,7 +72,12 @@ def main():
 
         plage.gameUpdate()
         
-
+        if plage.gameKeys[K_RIGHT]:
+            fconst.value = Vecteur3D(10,0,0)
+        else:
+            fconst.value = Vecteur3D()
+        
+        
         if plage.gameKeys[K_q]:
             plage.run = False
         if plage.gameKeys[K_ESCAPE]:
