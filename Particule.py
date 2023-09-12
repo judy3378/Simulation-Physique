@@ -9,6 +9,9 @@ from vecteur3D import Vecteur3D
 import pygame
 from pygame.locals import *
 from time import time
+import datetime
+from matplotlib import pylab
+from pylab import *
 from pylab import plot
 import math
 from random import random
@@ -19,7 +22,7 @@ import matplotlib.pyplot as plt
 class Particule(object):
     
     def __init__(self, pos0 = Vecteur3D(), vit0=Vecteur3D(), mass = 0, name = 'p1', color = 'blue', fix=False):
-        """attribute 'fix' can be used to not adhere to the PTD"""
+        """attribute 'fix' can be used to not adhere to the PFD"""
         self.position = [pos0]
         self.velocity=[vit0]
         self.acc = [Vecteur3D()]
@@ -60,42 +63,41 @@ class Particule(object):
         """disregards PFD and enforces position only when 'fix'=True"""
         self.position = position
         
-        
     def getForces(self):
         """returns the last force applied"""
         return self.forces[-1] 
 
     def getAcc(self):
-        """"""
+        """returns the current acceleration"""
         a = Vecteur3D()
         a = self.getForces() * (1/self.mass)
         self.acc.append(a)
         
         
+    # def plot(self):
+    #     """plots trajectory"""
+    #     X=[]
+    #     Y=[]
+    #     Z=[]
+    #     for p in self.position:
+    #         X.append(p.x)
+    #         Y.append(p.y)
+    #         Z.append(p.z)
+    #     return plot(X,Z,color=self.color,label=self.name) #X,Y,
+
     def plot(self):
-        """plots trajectory"""
-        X=[]
-        Y=[]
-        Z=[]
-        for p in self.position:
-            X.append(p.x)
-            Y.append(p.y)
-            Z.append(p.z)
-        return plot(X,Y,color=self.color,label=self.name)
+        """plots 2D trajectory"""
+        X, Y, Z = zip(*[(p.x, p.y, p.z) for p in self.position])
+        return plot(X, Y, color=self.color, label=self.name)
+
+    
     
     def plot3d(self):
         """"3d plot"""
         fig = plt.figure()
         ax=fig.add_subplot(111,projection='3d')
         
-        X=[]
-        Y=[]
-        Z=[]
-        for p in self.position:
-            X.append(p.x)
-            Y.append(p.y)
-            Z.append(p.z)
-        
+        X, Y, Z = zip(*[(p.x, p.y, p.z) for p in self.position])
         ax.scatter3D(X,Y,Z,color=self.color, label=self.name)
         
         ax.set_xlabel('X')
@@ -107,28 +109,22 @@ class Particule(object):
         plt.show()
     
 
-    def gameDraw(self,screen,scale):
-        
-        size= 5
+
+    def gameDraw(self, screen, scale):
+        size = 5
         pos = self.getPosition()
-        X = int(scale*pos.x)
-        Y = -int(scale*pos.y)
-        Z = int(scale*pos.z)
+        X, Y, Z = int(scale * pos.x), int(scale * pos.y), int(scale * pos.z)
         
-        r = random()
-        g = random()
-        b = random()
-        rgb = (r,g,b,1)
-    
-        pygame.draw.circle(screen,rgb,(X,Y),size*2,size)
-        
-        
+        r, g, b = random(), random(), random()
+        rgb = (r, g, b, 1)
+
+        pygame.draw.circle(screen, rgb, (X, Y), size * 2, size)
+
         vit = self.getSpeed()
-        VX = int(scale*vit.x) + X
-        VY = -(int(scale*vit.y) + Y)
-    
-        
-        pygame.draw.line(screen,self.color,(X,Y),(VX,VY))
+        VX, VY = int(scale * vit.x) + X, int(scale * vit.y) + Y
+
+        pygame.draw.line(screen, self.color, (X, Y), (VX, VY))
+
      
     def __str__(self):
         return f"Particle {self.name}: Position = {self.position}, Velocity = {self.velocity}"
@@ -167,10 +163,13 @@ class Univers(object) :
             totalForce = Vecteur3D()
             for f in self.listForce:
                 totalForce += f.apply(part)
+            if part.fix==False:    
+                part.setForce(totalForce)
+                part.getAcc()
+                part.move(self.step)
+            else:
                 
-            part.setForce(totalForce)
-            part.getAcc()
-            part.move(self.step)
+                part.move(self.step)
             
         self.temps.append(self.temps[-1]+self.step)
     
@@ -203,7 +202,7 @@ class Univers(object) :
             set the display fram erate to 60fps."""
     
         pygame.init()
-        self.t0= time()
+        self.t0 = time.time()
         self.screen = pygame.display.set_mode(self.dimensions)
         self.clock = pygame.time.Clock()
         self.background=(200,200,200)
@@ -215,7 +214,7 @@ class Univers(object) :
     def gameUpdate(self):
         """handles keyboard/mouse input and simulates display for a step"""
         
-        now = time()-self.t0
+        now = time.time()-self.t0
         while self.temps[-1] < now:
             self.simule()
 
@@ -262,7 +261,7 @@ class ForceHarmonic(object):
         self.particles = particles
     
     def apply(self, p):
-        return self.value * math.cos(self.pulsation*time())
+        return self.value * math.cos(self.pulsation*time.time())
 
 class Viscosity(object):
     def __init__(self, coef = 0, *particles):
@@ -336,7 +335,6 @@ class Gravity(object):
         return self.dir * p.mass
 
 
-    
 
 
 class dampingSpring(object):
